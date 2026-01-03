@@ -1,7 +1,5 @@
 package repositories
 
-// В repositories хранится вся логика БД
-
 import (
 	"database/sql"
 	"log"
@@ -14,13 +12,9 @@ import (
 var db *sql.DB
 
 func OpenSQLite() *sql.DB {
-	// Создание папки ./data если такой еще не существует
-
 	if err := os.MkdirAll("./data", 0755); err != nil {
 		log.Fatal("Cannot create directory ./data:", err)
 	}
-
-	// Открытие БД SQLite
 
 	var err error
 	db, err = sql.Open("sqlite", "./data/users.db")
@@ -28,13 +22,9 @@ func OpenSQLite() *sql.DB {
 		log.Fatal("Error open SQLite users.db:", err)
 	}
 
-	// Пингуем, проверка подключения к БД
-
 	if err := db.Ping(); err != nil {
 		log.Fatal("Error connecting to SQLite:", err)
 	}
-
-	// Создаём таблицу users.db и jwt_blacklist.db
 
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS users (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,8 +51,6 @@ func OpenSQLite() *sql.DB {
 }
 
 func FindUserByLogin(login string) (exists bool, err error) {
-	// Запрос SELECT EXISTS вернет 1 (true) или 0 (false)
-
 	query := `SELECT EXISTS(SELECT 1 FROM users WHERE login = ?)`
 
 	err = db.QueryRow(query, login).Scan(&exists)

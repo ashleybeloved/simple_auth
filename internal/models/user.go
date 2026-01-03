@@ -1,7 +1,5 @@
 package models
 
-// В models хранятся все структуры данных
-
 import "time"
 
 type User struct {

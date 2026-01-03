@@ -1,9 +1,25 @@
 package utils
 
-import "golang.org/x/crypto/bcrypt"
+import (
+	"log"
+	"os"
+	"strconv"
+
+	"golang.org/x/crypto/bcrypt"
+)
 
 func HashPassword(password string) ([]byte, error) {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+	digits, err := strconv.Atoi(os.Getenv("COST_FOR_BCRYPT"))
+	if err != nil {
+		return nil, err
+	}
+
+	if len(os.Getenv("COST_FOR_BCRYPT")) == 0 {
+		digits = 10
+		log.Println("Invalid COST_FOR_DIGITS in .env file, set to default = 10")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), digits)
 	if err != nil {
 		return nil, err
 	}

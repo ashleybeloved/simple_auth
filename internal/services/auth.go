@@ -98,14 +98,12 @@ func Login(login string, password string) (string, error) {
 }
 
 func Logout(authHeader string) error {
-	// Проверяем формат: "Bearer <token>"
-
 	const bearerPrefix = "Bearer "
 	if !strings.HasPrefix(authHeader, bearerPrefix) {
 		return ErrInvalidAuthorizationHeader
 	}
 
-	tokenString := authHeader[len(bearerPrefix):] // извлекаем сам токен
+	tokenString := authHeader[len(bearerPrefix):]
 
 	token, err := utils.ValidateJWT(tokenString)
 	if err != nil {

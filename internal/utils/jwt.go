@@ -9,9 +9,7 @@ import (
 )
 
 func GenerateJWT(id int) (string, error) {
-	expirationTime := time.Now().Add(1 * time.Hour) // Через сколько истекает токен
-
-	// claims для генерации токена
+	expirationTime := time.Now().Add(1 * time.Hour)
 
 	claims := &jwt.MapClaims{
 		"user_id": id,
@@ -31,9 +29,6 @@ func GenerateJWT(id int) (string, error) {
 
 func ValidateJWT(tokenString string) (*jwt.Token, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-
-		// Убеждаемся, что используется HS256
-
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}

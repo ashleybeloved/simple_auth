@@ -76,8 +76,6 @@ func Login(c *gin.Context) {
 }
 
 func Logout(c *gin.Context) {
-	// Получаем заголовок Authorization
-
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "You are not authorized"})
