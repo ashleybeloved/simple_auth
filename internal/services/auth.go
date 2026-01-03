@@ -1,8 +1,11 @@
 package services
 
 import (
+	"strings"
 	"todomanager/internal/repositories"
 	"todomanager/internal/utils"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // В service происходит вся бизнес-логика (создание, генерация и т.п.)
@@ -12,14 +15,20 @@ type AuthError string
 func (e AuthError) Error() string { return string(e) }
 
 var (
-	ErrInvalidInput           = AuthError("invalid login or password")
-	ErrInvalidPassword        = AuthError("invalid password")
-	ErrUserExist              = AuthError("user already exists")
-	ErrUserNotExist           = AuthError("user not exists")
-	ErrAddUser                = AuthError("can't add user in database")
-	ErrHashPassword           = AuthError("can't hash password")
-	ErrCompareHashAndPassword = AuthError("can't compare hash and password")
-	ErrGenerateJWT            = AuthError("can't generate JWT token")
+	ErrInvalidInput               = AuthError("invalid login or password")
+	ErrInvalidPassword            = AuthError("invalid password")
+	ErrInvalidAuthorizationHeader = AuthError("invalid authorization header: Bearer <token>")
+	ErrInvalidUserID              = AuthError("invalid user_id from claims")
+	ErrInvalidClaims              = AuthError("invalid jwt claims")
+	ErrInvalidExp                 = AuthError("invalid exp claims")
+	ErrUserExist                  = AuthError("user already exists")
+	ErrUserNotExist               = AuthError("user not exists")
+	ErrAddUser                    = AuthError("can't add user in database")
+	ErrHashPassword               = AuthError("can't hash password")
+	ErrCompareHashAndPassword     = AuthError("can't compare hash and password")
+	ErrTokenRevoked               = AuthError("JWT token revoked")
+	ErrUnknownToken               = AuthError("unknown token")
+	ErrGenerateJWT                = AuthError("can't generate JWT token")
 )
 
 func Register(login string, password string) (string, error) {
@@ -86,4 +95,67 @@ func Login(login string, password string) (string, error) {
 	}
 
 	return token, nil
+}
+
+func Logout(authHeader string) error {
+	// Проверяем формат: "Bearer <token>"
+
+	const bearerPrefix = "Bearer "
+	if !strings.HasPrefix(authHeader, bearerPrefix) {
+		return ErrInvalidAuthorizationHeader
+	}
+
+	tokenString := authHeader[len(bearerPrefix):] // извлекаем сам токен
+
+	token, err := utils.ValidateJWT(tokenString)
+	if err != nil {
+		return ErrUnknownToken
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return ErrInvalidClaims
+	}
+
+	exp, ok := claims["exp"].(float64)
+	if !ok {
+		return ErrInvalidExp
+	}
+
+	repositories.RevokeJWT(tokenString, exp)
+
+	return nil
+}
+
+func Test(authHeader string) (string, error) {
+	const bearerPrefix = "Bearer "
+	if !strings.HasPrefix(authHeader, bearerPrefix) {
+		return "", ErrInvalidAuthorizationHeader
+	}
+
+	tokenString := authHeader[len(bearerPrefix):]
+
+	exists, err := repositories.CheckForRevokeJWT(tokenString)
+	if exists {
+		return "", ErrTokenRevoked
+	}
+
+	token, err := utils.ValidateJWT(tokenString)
+	if err != nil {
+		return "", ErrUnknownToken
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", ErrInvalidClaims
+	}
+
+	id, ok := claims["user_id"].(float64)
+	if !ok {
+		return "", ErrInvalidUserID
+	}
+
+	login, err := repositories.GetUserLoginFromID(int(id))
+
+	return login, nil
 }

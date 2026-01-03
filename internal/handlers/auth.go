@@ -3,15 +3,11 @@ package handlers
 import (
 	"log"
 	"net/http"
-	"strings"
 
 	"todomanager/internal/models"
-	"todomanager/internal/repositories"
 	"todomanager/internal/services"
-	"todomanager/internal/utils"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 )
 
 func Register(c *gin.Context) {
@@ -88,36 +84,26 @@ func Logout(c *gin.Context) {
 		return
 	}
 
-	// Проверяем формат: "Bearer <token>"
-
-	const bearerPrefix = "Bearer "
-	if !strings.HasPrefix(authHeader, bearerPrefix) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header must be Bearer <token>"})
-		return
-	}
-
-	tokenString := authHeader[len(bearerPrefix):] // извлекаем сам токен
-
-	token, err := utils.ValidateJWT(tokenString)
+	err := services.Logout(authHeader)
 	if err != nil {
-		log.Print(err)
-		c.JSON(http.StatusForbidden, gin.H{"error": "Unknown token"})
-		return
+		switch err {
+		case services.ErrInvalidAuthorizationHeader:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err})
+			return
+		case services.ErrUnknownToken:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err})
+			return
+		case services.ErrInvalidClaims:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		case services.ErrInvalidExp:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unknown Error"})
+			return
+		}
 	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims"})
-		return
-	}
-
-	exp, ok := claims["exp"].(float64)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid exp"})
-		return
-	}
-
-	repositories.RevokeJWT(tokenString, exp)
 
 	c.JSON(http.StatusOK, "Bye!")
 }
@@ -129,41 +115,29 @@ func Test(c *gin.Context) {
 		return
 	}
 
-	const bearerPrefix = "Bearer "
-	if !strings.HasPrefix(authHeader, bearerPrefix) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header must be Bearer <token>"})
-		return
-	}
-
-	tokenString := authHeader[len(bearerPrefix):]
-
-	// Сначала проверка на ревоук
-
-	exists, err := repositories.CheckForRevokeJWT(tokenString)
-	if exists {
-		c.JSON(http.StatusNotAcceptable, gin.H{"error": "Your JWT token revoked"})
-		return
-	}
-
-	token, err := utils.ValidateJWT(tokenString)
+	login, err := services.Test(authHeader)
 	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Unknown token"})
-		return
+		switch err {
+		case services.ErrInvalidAuthorizationHeader:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err})
+			return
+		case services.ErrTokenRevoked:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err})
+			return
+		case services.ErrUnknownToken:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err})
+			return
+		case services.ErrInvalidClaims:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		case services.ErrInvalidUserID:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unknown Error"})
+			return
+		}
 	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid claims"})
-		return
-	}
-
-	id, ok := claims["user_id"].(float64)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user_id"})
-		return
-	}
-
-	login, err := repositories.GetUserLoginFromID(int(id))
 
 	c.JSON(http.StatusOK, "You are logged in "+login)
 }
