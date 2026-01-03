@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"os"
-	"todomanager/internal/utils"
+	"simple_auth/internal/utils"
 
 	_ "github.com/glebarez/sqlite"
 )

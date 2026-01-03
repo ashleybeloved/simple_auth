@@ -4,8 +4,8 @@ import (
 	"log"
 	"net/http"
 
-	"todomanager/internal/models"
-	"todomanager/internal/services"
+	"simple_auth/internal/models"
+	"simple_auth/internal/services"
 
 	"github.com/gin-gonic/gin"
 )

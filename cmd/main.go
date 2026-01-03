@@ -2,8 +2,8 @@ package main
 
 import (
 	"log"
-	"todomanager/internal/handlers"
-	"todomanager/internal/repositories"
+	"simple_auth/internal/handlers"
+	"simple_auth/internal/repositories"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"

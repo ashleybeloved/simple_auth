@@ -1,14 +1,12 @@
 package services
 
 import (
+	"simple_auth/internal/repositories"
+	"simple_auth/internal/utils"
 	"strings"
-	"todomanager/internal/repositories"
-	"todomanager/internal/utils"
 
 	"github.com/golang-jwt/jwt/v5"
 )
-
-// В service происходит вся бизнес-логика (создание, генерация и т.п.)
 
 type AuthError string
 
@@ -51,8 +49,6 @@ func Register(login string, password string) (string, error) {
 		return "", ErrAddUser
 	}
 
-	// Генерируем JWT-токен по ID только что зарегистрировавшемуся пользователю
-
 	id, err := repositories.GetUserIDFromLogin(login)
 	if err != nil {
 		return "", ErrUserNotExist
@@ -66,14 +62,10 @@ func Register(login string, password string) (string, error) {
 }
 
 func Login(login string, password string) (string, error) {
-	// Если не существует - пропускаем запрос дальше
-
 	exists, err := repositories.FindUserByLogin(login)
 	if err != nil || !exists {
 		return "", ErrUserNotExist
 	}
-
-	// Проверка на совпадение пароля
 
 	compared, err := repositories.CheckUserPassword(login, password)
 	if compared == false {
@@ -82,8 +74,6 @@ func Login(login string, password string) (string, error) {
 	if err != nil {
 		return "", ErrCompareHashAndPassword
 	}
-
-	// Генерируем JWT-токен по ID
 
 	id, err := repositories.GetUserIDFromLogin(login)
 	if err != nil {
